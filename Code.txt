@@ -1,0 +1,128 @@
+# import all required modules
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import yfinance as yf
+import random
+import warnings
+warnings.filterwarnings('ignore')
+
+
+# getting the list of securities under FnO section in NSE
+csv = pd.read_csv('sos_scheme.csv')
+symbol = csv['Symbol']
+
+
+data = pd.DataFrame()  # creating an empty dataframe
+
+for i in symbol:       # running loop for downloading daily historical stock data of all securities from yahoo finance
+    
+    df = yf.download(f'{i}.NS',period='5y')
+    df = df.rename(columns={'Adj Close':f'{i}'})  # renaming 'Adj Close' column to symbol ticker
+    data[i] = df[i]                               # stacking columns of securities with adj close prices
+
+
+stocks = random.sample(list(symbol),10)  # randomly selecting 10 stocks from the list of securities under FnO section
+
+port_train = data[stocks]     # selecting adj close prices of randomly chosen stocks
+
+plt.figure(figsize=(25,10))                       # plotting normalized adj close prices of randomly chosen stocks
+plt.plot(port_train/port_train.iloc[0]*100)
+plt.legend(stocks,loc='upper left',fontsize=12)
+plt.ylabel('Price in Rs')
+plt.show()
+
+
+portfolio_train = Portfolio_Optimization(data,stocks)
+
+weight = []
+w_table = pd.DataFrame(columns = list(portfolio_train.historical_stock_covariance().columns))
+
+for i in range(3000):
+    w = np.random.random(len(portfolio_train.historical_stock_covariance().columns))
+    w = w/(np.sum(w))
+    w_table.loc[i] = w                  # building dataframe to store random weights of randomly chosen stocks in the portfolio
+
+returns_of_weighhts = []
+for i in range(3000):
+        returns = w_table.loc[i]@portfolio_train.historical_stock_Return_Pct_Returns()
+        returns_of_weighhts.append(returns)  # calculating return of portfolios
+
+variance_of_weights = []
+for i in range(3000):
+        var = np.transpose(w_table.loc[i])@portfolio_train.historical_stock_covariance()@w_table.loc[i]
+        risk = np.sqrt(var)
+        variance_of_weights.append(risk)     # calculating risk of portfolios
+
+w_table["RETURNS"] = returns_of_weighhts
+w_table["RISK"] = variance_of_weights
+    
+risk_free_rate = 0.071
+w_table['SHARPE_RATIO'] = (w_table['RETURNS']-risk_free_rate)/w_table['RISK']  # calculating sharpe ratio of portfolios
+
+
+high_return = w_table.sort_values(by=['RETURNS'],ascending=False)  # sorting all portfolios on the basis of returns in descending order
+
+low_risk = w_table.sort_values(by=['RISK'],ascending=True)          # sorting all portfolios on the basis of risk in asscending order
+
+high_sharpe = w_table.sort_values(by=['SHARPE_RATIO'],ascending=False)    # sorting all portfolios on the basis of sharpe ratio in descending order
+
+port_amount = 10000000
+
+class PnL():
+    
+    def __init__(self,df1,df2,port_amount):
+        
+        self.df1 = df1
+        self.df2 = df2
+        self.port_amount = port_amount
+        
+    def value_of_each_security(self):           # calculating amount to funds to be invested in each randomly chosen stock
+        
+        value_of_each_security = self.df1.iloc[0,:-3]*self.port_amount
+        return value_of_each_security
+    
+    def buy_price(self):                        # calculating buy price of stocks on 23-06-2022
+        
+        buy_price = self.df2.iloc[-252]
+        return buy_price
+    
+    def sell_price(self):                       # calculating buy price of stocks on 30-06-2023
+        
+        sell_price = self.df2.iloc[-1]
+        return sell_price
+    
+    def no_of_shares_of_security(self):         # calculating number of shares to buy of each stock
+        
+        no_of_shares = PnL.value_of_each_security(self)//PnL.buy_price(self)
+        return no_of_shares
+    
+    def pnl(self):                              
+        
+        return_from_each_security = ((self.sell_price()-self.buy_price())*self.no_of_shares_of_security()).round(0)     # calculating absolute return of individual stock
+        percent_return_from_each_security = return_from_each_security/self.value_of_each_security()*100      # calculating percentage return of individual stock
+        total_return_from_portfolio = np.sum(return_from_each_security).round(0)      # calculating absolute return of the portfolio
+        percentage_return_from_portfolio = total_return_from_portfolio/self.port_amount*100       # calcultaing percentage return of the portfolio
+        
+        PnL = pd.DataFrame()
+        PnL['return_from_each_security'] = return_from_each_security
+        PnL['percent_return_from_each_security'] = percent_return_from_each_security
+        
+        print(PnL)
+        print("Absolute return from portfolio is {}".format(total_return_from_portfolio))
+        print("Percentage return from portfolio is {}%".format(percentage_return_from_portfolio.round(2)))
+
+
+portfolio_test = PnL(high_sharpe,port_train,port_amount)
+
+portfolio_test.buy_price()
+portfolio_test.value_of_each_security()
+portfolio_test.no_of_shares_of_security()
+portfolio_test.sell_price()
+portfolio_test.pnl()
+
+
+plt.subplots(figsize=(25,10))            
+plt.scatter(high_sharpe['RISK'],high_sharpe['RETURNS'],marker = 'o', s=100, alpha = 0.25)  # plotting risk and return of all portfolios
+plt.scatter(high_sharpe.iloc[0]['RISK'],high_sharpe.iloc[0]['RETURNS'],color='g',marker='*',s=500)  # identifying  portfolio with max sharpe
+plt.scatter(low_risk.iloc[0]['RISK'],low_risk.iloc[0]['RETURNS'],color='r',marker='*',s=500)  # identifying portfolio with min risk
