@@ -33,7 +33,7 @@ plt.ylabel('Price in Rs')
 plt.show()
 class Portfolio_Optimization():
     
-    def _init_ (self, data, stocks) :
+    def __init__ (self, data, stocks) :
 
         self.data = data
         self.stocks = stocks
