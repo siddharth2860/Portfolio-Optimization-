@@ -51,7 +51,7 @@ class Portfolio_Optimization():
     def historical_stock_Return_Pct_Returns(self):     # calculating the historical annual return of randomly chosen stocks
 
         data_portfolio_train = self.data[self.stocks][:-252]
-        return data_portfolio_train.pct_change().dropna() -mean ()*252
+        return data_portfolio_train.pct_change().dropna().mean()*252
 
     def historical_stock_covariance(self):# calculating covariance of daily percentage changes among the randomly chosen stocks
 
