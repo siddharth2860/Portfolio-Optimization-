@@ -31,7 +31,32 @@ plt.plot(port_train/port_train.iloc[0]*100)
 plt.legend(stocks,loc='upper left',fontsize=12)
 plt.ylabel('Price in Rs')
 plt.show()
+class Portfolio_Optimization():
+    
+    def _init_ (self, data, stocks) :
 
+        self.data = data
+        self.stocks = stocks
+
+    def pct_change (self) : # calculating daily percent_change of randomly chosen stocks
+
+        data_portfolio = self.data[self.stocks]
+        return data_portfolio.pct_change().dropna()
+
+    def corr(self) :        # calculating the correlation of daily percentage changes among the randomly chosen stocks
+
+        data_portfolio = self.data[self.stocks]
+        return data_portfolio.pct_change().dropna().corr().round (2)
+
+    def historical_stock_Return_Pct_Returns(self):     # calculating the historical annual return of randomly chosen stocks
+
+        data_portfolio_train = self.data[self.stocks][:-252]
+        return data_portfolio_train.pct_change().dropna() -mean ()*252
+
+    def historical_stock_covariance(self):# calculating covariance of daily percentage changes among the randomly chosen stocks
+
+        data_portfolio_train = self.data[self.stocks][:-252]
+        return data_portfolio_train.pct_change().cov()*252
 
 portfolio_train = Portfolio_Optimization(data,stocks)
 
